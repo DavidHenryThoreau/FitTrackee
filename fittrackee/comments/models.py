@@ -33,20 +33,24 @@ def get_comments(
             Comment.workout_id == workout_id,
             Comment.reply_to == reply_to,
             or_(
+                Comment.user_id == user.id,
                 and_(
-                    Comment.text_visibility == PrivacyLevel.PUBLIC,
-                    Comment.user_id.not_in(blocked_users + blocked_by_users),
-                ),
-                or_(user.id == Mention.user_id),
-                or_(
-                    Comment.user_id == user.id,
-                    and_(
-                        Comment.user_id.in_(following_ids),
-                        Comment.text_visibility == PrivacyLevel.FOLLOWERS,
+                    Comment.suspended_at == None,  # noqa,
+                    or_(
+                        Mention.user_id == user.id,
+                        and_(
+                            Comment.text_visibility == PrivacyLevel.PUBLIC,
+                            Comment.user_id.not_in(
+                                blocked_users + blocked_by_users
+                            ),
+                        ),
+                        and_(
+                            Comment.user_id.in_(following_ids),
+                            Comment.text_visibility == PrivacyLevel.FOLLOWERS,
+                        ),
                     ),
                 ),
             ),
-            Comment.suspended_at == None,  # noqa
         )
     else:
         comments_filter = Comment.query.filter(
